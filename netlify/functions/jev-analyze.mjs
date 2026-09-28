@@ -1,6 +1,6 @@
 import { validateQuestion } from '../../shared/question-schema.mjs';
 import { sanitizeProfile } from '../../shared/market-profile.mjs';
-import { buildQuestions, CORE_KEYS } from '../../shared/jev-questions.mjs';
+import { buildPack, PACKS } from '../../shared/jev-questions.mjs';
 
 // JEV call is kept on the server so the browser never calls TypeSafe directly.
 // The learner's key is used for this request only; it is not persisted or logged.
@@ -12,18 +12,19 @@ export default async function handler(request) {
   if (request.method !== 'POST') return json(405, { error: 'POST 요청만 가능합니다.' });
   let body;
   try { body = await request.json(); } catch { return json(400, { error: '요청 형식이 올바르지 않습니다.' }); }
-  const { apiKey, evidence, note, extraQuestion } = body ?? {};
+  const { apiKey, evidence, note, extraQuestion, pack = 'core' } = body ?? {};
   if (typeof apiKey !== 'string' || !apiKey.trim() || apiKey.length > 512)
     return json(400, { error: 'JEV API 키를 확인해 주세요.' });
   if (typeof note !== 'string' || note.trim().length < 10 || note.length > 600)
     return json(400, { error: '창업 메모를 10~600자로 적어 주세요.' });
   const profile = sanitizeProfile(evidence);
   if (!profile) return json(400, { error: '상권 통계를 다시 선택해 주세요.' });
+  if (!Object.hasOwn(PACKS, pack)) return json(400, { error: '분석 묶음을 다시 선택해 주세요.' });
 
-  // One request carries every question: the core three, the deeper public-data questions,
-  // the candidate comparison (when candidates exist) and an optional learner-designed question.
-  let questions = buildQuestions(profile);
-  if (extraQuestion != null) {
+  // Each pack is one JEV request with many questions: core judgement (+ candidate comparison and an optional
+  // learner-designed question), the multi-criteria scorecard, or the industry scan. The browser sends packs in parallel.
+  let questions = buildPack(profile, pack);
+  if (extraQuestion != null && pack === 'core') {
     const { key, definition } = extraQuestion;
     const errors = validateQuestion(key, definition);
     if (!errors.length && key in questions) errors.push('기본 질문과 같은 키는 쓸 수 없습니다.');
@@ -53,8 +54,8 @@ export default async function handler(request) {
   }
   let raw;
   try { raw = await response.json(); } catch { return json(502, { error: 'JEV 응답을 읽을 수 없습니다.' }); }
-  if (!raw?.answers || !CORE_KEYS.every(k => raw.answers[k]))
-    return json(502, { error: 'JEV 응답에 필요한 답변이 없습니다.', raw });
+  if (!raw?.answers || typeof raw.answers !== 'object' || !Object.keys(questions).some(k => raw.answers[k]))
+    return json(502, { error: 'JEV 응답에 필요한 답변이 없습니다.' });
   return json(200, { answers: raw.answers, requestBody: { ...requestBody, model: raw.model ?? requestBody.model }, model: raw.model ?? requestBody.model });
 }
 

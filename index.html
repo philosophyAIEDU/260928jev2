@@ -50,7 +50,7 @@
 
       <div class="flow"><div><b>state</b><p>숫자·메모 등<br>판단 재료</p></div><i>+</i><div><b>questions</b><p>유형·지시문·기준<br>(내가 설계)</p></div><i>→</i><div class="flow-jev"><b>JEV</b><p>/v1/systemone</p></div><i>→</i><div><b>answers</b><p>질문 키별<br>구조화된 답</p></div></div>
       <div class="card roles"><div class="step">함께 쓰기 <span>JEV + 생성형 AI</span></div><h2>판단은 JEV, 설명은 Gemini</h2><p class="muted">두 AI의 역할을 나누면 서로의 약점을 보완할 수 있습니다. 실습실에서 JEV 분석 뒤 <b>Gemini 종합 상담</b>으로 이어집니다.</p>
-        <div class="role-grid"><article><b>JEV</b><ul><li>정해 둔 질문 8~10개에 한 번에 답</li><li>선택지·단계·예/아니요 형식 고정</li><li>확률로 불확실성 표시</li><li>표로 모으고 비교하기 쉬움</li></ul></article><article><b>Gemini</b><ul><li>JEV 판단과 숫자를 받아 글로 설명</li><li>현장 조사 계획을 문장으로 제안</li><li>추가 질문에 대화로 답변</li><li>근거 숫자가 있는지 꼭 확인하며 읽기</li></ul></article></div></div>
+        <div class="role-grid"><article><b>JEV</b><ul><li>분석 묶음 3개, 질문 24개 안팎을 동시에 답</li><li>7개 기준을 같은 0~4 척도로 채점</li><li>선택지·단계·예/아니요 형식 고정</li><li>확률로 불확실성 표시</li><li>표로 모으고 비교하기 쉬움</li></ul></article><article><b>Gemini</b><ul><li>JEV 판단과 숫자를 받아 글로 설명</li><li>현장 조사 계획을 문장으로 제안</li><li>추가 질문에 대화로 답변</li><li>근거 숫자가 있는지 꼭 확인하며 읽기</li></ul></article></div></div>
     </section>
 
     <!-- LAB -->
@@ -66,20 +66,27 @@
         <label class="full">창업 메모<textarea id="note" maxlength="600" rows="4" placeholder="예: 역 앞에 학원들이 많은데 방과후 영어 수업 수요가 있을지 궁금합니다. 임대료와 하교 시간대 유동인구를 확인하고 싶어요."></textarea></label>
         <div class="note-meta"><span id="noteCount">0 / 600</span><div id="noteSignals" class="signals"></div></div>
         <div class="candidates"><b>비교 후보 (선택)</b><p>같은 업종으로 비교할 시군구를 고르면 JEV가 <b>먼저 방문할 곳</b>을 후보 중에서 고릅니다.</p><div class="fields"><label>후보 1<select id="cand1"></select></label><label>후보 2<select id="cand2"></select></label></div></div>
+        <div class="packs"><b>JEV 분석 묶음</b><p>묶음마다 JEV 요청 한 번에 여러 질문을 담아 <b>동시에</b> 보냅니다. 모든 답은 같은 형식이라 한 화면에서 비교할 수 있습니다.</p><div id="packList" class="pack-list"></div></div>
         <div class="question-count" id="questionCount"></div>
         <div id="extraInfo" class="extra-info" hidden></div>
         <div class="keybox"><label class="full">JEV API 키 <span>(실제 호출에만 필요)</span><input id="apiKey" type="password" autocomplete="off" placeholder="API 키를 입력하세요"></label><p>키는 브라우저 저장소에 보관하지 않고 요청 중에만 사용합니다. Netlify 함수가 TypeSafe API로 전달합니다.</p></div><div class="actions"><button id="analyze" class="primary">JEV로 분석하기 <span>↗</span></button><button id="demo" class="secondary">키 없이 예시 보기</button></div><p id="status" class="status" role="status" aria-live="polite"></p>
         <details class="preview"><summary>JEV에 보낼 요청 미리보기</summary><p>숫자(state)와 질문(questions)이 어떻게 묶이는지 보세요. API 키는 포함하지 않습니다.</p><pre id="preview"></pre></details></section>
       <section class="card results" id="results" hidden><div class="step">04 <span>결과 해석</span></div><div class="result-title"><div><h2>다음 현장 조사를 정해 보세요</h2><p id="modeLabel" class="muted"></p></div><span id="modeBadge" class="badge"></span></div><h3 class="group-title">기본 판단 <span>상권 특성 · 조사 우선순위 · 추가 근거</span></h3><div id="resultCards" class="result-grid"></div><h3 class="group-title">심층 판단 <span>공공데이터 지표를 더 깊게 읽은 결과</span></h3><div id="deepCards" class="result-grid"></div>
+        <div id="criteriaBox" class="panel" hidden><h3 class="group-title">다기준 평가 <span>공공데이터만으로 JEV가 7개 기준을 같은 0~4 척도로 채점</span></h3>
+          <div class="score-layout"><div class="composite"><span>현장 조사 매력도</span><strong id="compValue">—</strong><small id="compSd"></small><div class="comp-bar"><i id="compBar"></i><b id="compRange"></b></div><p class="helper">JEV 기준별 점수를 0~1로 바꿔(경쟁 압력은 뒤집어) 아래 가중치로 평균한 값입니다. ± 값은 JEV가 준 단계별 확률에서 계산한 불확실성입니다. 계산은 이 화면에서 투명하게 합니다.</p><div id="confBadge" class="conf"></div></div>
+          <div><div id="criteriaRows" class="criteria-rows"></div><p class="helper">가중치를 바꾸면 매력도가 바로 다시 계산됩니다(JEV를 다시 부르지 않음). 막대의 옅은 띠는 JEV 확률로 본 ±1 표준편차 범위입니다.</p></div></div></div>
+        <div id="scanBox" class="panel" hidden><h3 class="group-title">업종 스캔 <span>같은 질문을 10개 업종에 던져 진입 여지를 줄 세움</span></h3><ol id="scanList" class="scan-list"></ol><p class="helper">점수가 높을수록 JEV가 새 점포가 들어갈 여지가 크다고 본 업종입니다. 이름을 누르면 그 업종으로 바꿔 다시 볼 수 있습니다(결과는 초기화됩니다).</p></div>
+        <div id="checkBox" class="panel" hidden><h3 class="group-title">교차 확인 <span>JEV 판단을 숫자로 만든 단순 규칙과 나란히 비교</span></h3><div class="table-scroll"><table class="sheet check-table"><thead><tr><th>기준</th><th>JEV 판단</th><th>단순 규칙</th><th>근거 숫자</th><th>결과</th></tr></thead><tbody id="checkRows"></tbody></table></div><p class="helper">규칙과 1.2 이상 차이 나면 “다시 보기”로 표시합니다. JEV가 틀렸다는 뜻이 아니라, 여러 숫자를 함께 읽은 JEV와 한 가지 공식이 달리 본 곳이니 근거를 한 번 더 확인하라는 신호입니다.</p></div>
         <div class="checklist"><strong>현장 조사 체크리스트</strong><p class="muted">결과와 메모를 바탕으로 자동으로 만든 초안입니다. 직접 고치고 더해 보세요.</p><ul id="checklist"></ul></div>
         <div class="takeaway"><strong>이 결과로 알 수 없는 것</strong><p>JEV의 점수와 확률은 창업 성공률이 아닙니다. 임대료, 실제 매출, 유동인구, 고객 수요와 경쟁점의 품질을 별도로 조사해 주세요.</p></div>
         <div class="actions"><button id="saveResult" class="primary">비교 보드에 저장 <span>＋</span></button><a class="secondary as-button" href="#compare">비교 보드 보기</a><a class="secondary as-button" href="#consult">Gemini 상담으로 ↓</a></div>
         <details><summary>실제 질문과 응답 구조 보기</summary><p>API 키는 포함하지 않습니다. Noul은 예/아니요 확률, Choice는 선택지와 확률, Score는 단계별 점수와 확률입니다.</p><pre id="raw"></pre></details></section>
       <section class="card consult" id="consult" hidden><div class="step">05 <span>Gemini 종합 상담</span></div>
-        <div class="result-title"><div><h2>JEV 판단을 바탕으로 상담받기</h2><p class="muted">JEV가 숫자로 정리한 판단을 Gemini가 받아 이해하기 쉬운 상담 글로 풀어 줍니다.</p></div><span class="badge model">gemini-3.5-flash-lite</span></div>
+        <div class="result-title"><div><h2>JEV 판단을 Gemini가 확인하고 풀어 줍니다</h2><p class="muted">Gemini가 JEV의 기준별 판단을 근거 숫자와 하나씩 대조해 확인하고, 이해하기 쉬운 말로 설명합니다.</p></div><span class="badge model">gemini-3.5-flash-lite</span></div>
         <div class="pipeline"><div><b>공공데이터</b><p>점포 수 · 입지계수 · 순위</p></div><i>→</i><div class="p-jev"><b>JEV</b><p><span id="pipeCount">8</span>개 질문 · 확률</p></div><i>→</i><div class="p-gem"><b>Gemini</b><p>설명 · 상담 · 대화</p></div><i>→</i><div><b>나</b><p>현장에서 확인</p></div></div>
         <p class="helper">역할 나누기: <b>JEV</b>는 정해진 질문에 형식이 고정된 판단과 확률을 주고, <b>Gemini</b>는 그 판단을 근거로 글을 씁니다. 판단을 먼저 구조화해 두면 상담 글이 어떤 숫자에 기대고 있는지 추적할 수 있습니다.</p>
         <div class="keybox"><label class="full">Gemini API 키 <span>(Google AI Studio에서 발급)</span><input id="geminiKey" type="password" autocomplete="off" placeholder="Gemini API 키를 입력하세요"></label><p>키는 브라우저 저장소에 보관하지 않고 요청 중에만 사용합니다. Netlify 함수가 Google Gemini API로 전달합니다. 호출 비용과 한도는 본인 계정에 따릅니다.</p></div>
+        <div class="level-row"><span>설명 수준</span><label><input type="radio" name="level" value="easy" checked> 입문자용 쉬운 설명</label><label><input type="radio" name="level" value="pro"> 분석가용 요약</label></div>
         <div class="actions"><button id="consultRun" class="primary">Gemini 종합 상담 받기 <span>✦</span></button><button id="consultDemo" class="secondary">키 없이 예시 상담 보기</button></div>
         <p id="consultStatus" class="status" role="status" aria-live="polite"></p>
         <div id="chat" class="chat"></div>
@@ -90,7 +97,7 @@
     <!-- COMPARE -->
     <section id="compare" class="compare">
       <div class="section-heading"><span class="eyebrow dark">STEP 3 · COMPARE</span><h2>비교 보드</h2><p class="lead">분석 결과를 저장하면 같은 칸에 차곡차곡 쌓입니다. 답의 구조가 같기 때문에 가능한 일입니다. 이 브라우저에만 저장되며 API 키는 저장하지 않습니다.</p></div>
-      <div class="card"><div class="table-scroll"><table class="sheet board"><thead><tr><th>#</th><th>지역 · 업종</th><th>지역 비중</th><th>시도 비중</th><th>상권 특성 (Choice)</th><th>조사 우선순위 (Score)</th><th>추가 근거 필요 (Noul)</th><th>상권 성격</th><th>경쟁 강도</th><th>직접 만든 질문</th><th>방식</th><th></th></tr></thead><tbody id="boardBody"></tbody></table></div>
+      <div class="card"><div class="table-scroll"><table class="sheet board"><thead><tr><th>#</th><th>지역 · 업종</th><th>지역 비중</th><th>시도 비중</th><th>상권 특성 (Choice)</th><th>조사 우선순위 (Score)</th><th>추가 근거 필요 (Noul)</th><th>상권 성격</th><th>매력도</th><th>직접 만든 질문</th><th>방식</th><th></th></tr></thead><tbody id="boardBody"></tbody></table></div>
         <p id="boardEmpty" class="empty">아직 저장한 결과가 없습니다. 실습실에서 <b>키 없이 예시 보기</b>를 누른 뒤 <b>비교 보드에 저장</b>을 눌러 보세요. 서로 다른 지역 2~3곳을 저장하면 차이가 잘 보입니다.</p>
         <div class="actions"><button id="exportCsv" class="secondary">CSV로 내보내기</button><button id="clearBoard" class="secondary">모두 지우기</button></div></div>
     </section>
