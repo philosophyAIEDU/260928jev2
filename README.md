@@ -14,12 +14,36 @@
 | 단계 | 기능 | JEV에 대해 배우는 점 |
 |---|---|---|
 | ① JEV 이해하기 | 대화형 답변과 JEV 구조화 답변 비교, “표로 옮기기” 체험, 장점 4가지, Choice·Score·Noul 확률 슬라이더, `state + questions → answers` 흐름도 | 답의 모양을 먼저 정하고 확률로 불확실성을 읽는 방식 |
-| ② 실습실 | 시군구·업종 선택, 업종 구성 막대, 시도 안 비중 순위, 연습 사례 6종, 메모 근거 표시, 요청 미리보기, 선택지별 확률 분포, 현장 조사 체크리스트 | 판단 재료(state)가 답에 어떻게 반영되는지 |
+| ② 실습실 | 시군구·업종 선택, 업종 구성 막대, 시도 안 비중 순위, **심층 지표**(입지계수, 전국 비중, 규모 지수, 업종 다양성, 특화 업종), 비교 후보 2곳, 연습 사례 6종, 메모 근거 표시, 요청 미리보기, **질문 9~10개 한 번에 분석**, 선택지별 확률 분포, 현장 조사 체크리스트 | 판단 재료(state)가 답에 어떻게 반영되는지, 한 요청에 여러 질문을 묶는 방법 |
+| ②-1 Gemini 종합 상담 | JEV 결과와 공공데이터 지표를 `gemini-3.5-flash-lite`에 보내 상담 글 생성, 추가 질문 대화, 보낸 입력 공개, 키 없는 예시 상담 | 판단(JEV)과 설명(Gemini)의 역할 나누기, 근거 추적 |
 | ③ 비교 보드 | 분석 결과를 저장해 한 표로 비교, CSV 내보내기 (브라우저 저장소, API 키 제외) | 같은 구조의 답이라 여러 지역을 자동으로 모을 수 있음 |
 | ④ 질문 설계 | 질문 키·유형·지시문·기준을 직접 만들고 형식 검사, 실습실 분석에 추가 전송 | 질문을 설계하는 사람이 답의 범위를 정함 |
-| ⑤ 개념 퀴즈 | 7문항, 즉시 해설 | 비중·%p·확률의 올바른 해석 |
+| ⑤ 개념 퀴즈 | 9문항, 즉시 해설 | 비중·%p·확률의 올바른 해석 |
 
-예시 모드는 **비중 비율과 메모에 담긴 근거 종류**로 값을 만드는 공개 규칙입니다. 메모를 바꾸면 값이 달라져 흐름을 체험할 수 있지만 JEV 응답이 아닙니다. 직접 만든 질문의 예시 값은 의미 없는 자리표시 값입니다.
+예시 모드는 **입지계수·순위·업종 구성과 메모에 담긴 근거 종류**로 값을 만드는 공개 규칙입니다. 메모를 바꾸면 값이 달라져 흐름을 체험할 수 있지만 JEV 응답이 아닙니다. 직접 만든 질문의 예시 값은 의미 없는 자리표시 값입니다.
+
+## JEV 질문 구성
+
+한 번의 `/v1/systemone` 요청에 아래 질문을 모두 담습니다. 정의는 [`shared/jev-questions.mjs`](shared/jev-questions.mjs)에 있으며 서버 요청과 화면 설명이 같은 파일을 씁니다.
+
+| 키 | 유형 | 묻는 것 |
+|---|---|---|
+| `market_pattern` | choice | 상권 특성 (밀집 / 적음 / 혼합 / 근거 부족) |
+| `visit_priority` | score 0~3 | 현장 조사 우선순위 |
+| `needs_more_evidence` | noul | 창업 판단 전 추가 조사 필요 여부 |
+| `commercial_character` | choice | 업종 구성으로 본 상권 전체 성격 (주거 생활형, 업무·전문서비스형, 관광·외식형, 교육·가족형, 복합형) |
+| `competition_intensity` | score 0~4 | 입지계수·순위·점포 수로 본 경쟁 강도 |
+| `entry_risk_focus` | choice | 먼저 검증할 위험 (경쟁 과밀, 수요 불확실, 비용 미확인, 고객층 불일치, 정보 부족) |
+| `hypothesis_fit` | noul | 메모의 가설이 공공데이터 수치와 부합하는가 |
+| `differentiation_needed` | noul | 진입 시 뚜렷한 차별화가 필요한가 |
+| `first_visit` | choice (동적) | 비교 후보를 고른 경우, 먼저 방문할 곳. 선택지가 학습자가 고른 지역으로 만들어집니다 |
+| (직접 만든 질문) | 선택 | 질문 설계 화면에서 만든 질문 |
+
+심층 지표는 [`shared/market-profile.mjs`](shared/market-profile.mjs)가 `data/market.json`에서 계산합니다. **입지계수** = 시군구 업종 비중 ÷ 시도(또는 전국) 업종 비중, **규모 지수** = 시군구 전체 점포 수 ÷ 시도 내 시군구 평균, **업종 다양성** = 10개 업종 비중의 정규화 엔트로피(0~1), **특화 업종** = 시도 대비 입지계수 1.3 이상이면서 비중 2% 이상인 업종입니다.
+
+## Gemini 종합 상담
+
+JEV 결과가 나오면 05단계에서 사용자가 입력한 Gemini API 키로 `netlify/functions/gemini-consult.mjs`(`/api/gemini/consult`)를 호출합니다. 모델은 `gemini-3.5-flash-lite`이며 Google의 `generateContent` REST API를 씁니다. 서버는 받은 지표와 JEV 답을 형식 검사한 뒤 [`shared/consult-prompt.mjs`](shared/consult-prompt.mjs)로 상담 자료를 만듭니다. 시스템 지시는 없는 통계를 지어내지 말 것, JEV 확률을 인용할 것, 사실·JEV 판단·상담가 의견을 구분할 것, 창업 여부를 결론 내리지 말 것을 요구합니다. 추가 질문은 이전 대화를 함께 보내며 최대 5회까지 이어집니다. 화면의 **Gemini에게 보낸 입력 보기**에서 실제 입력을 확인할 수 있습니다. 키 없이 보는 예시 상담은 숫자를 정해진 문장 틀에 넣은 것이며 Gemini 출력이 아닙니다. Gemini 키도 JEV 키와 마찬가지로 저장하지 않습니다.
 
 시군구 업종 비중은 인구당 점포 밀도나 매출을 의미하지 않습니다. 시도 평균에는 선택한 시군구도 포함됩니다. “점포가 적다”는 사실만으로 창업 기회라 판단할 수 없습니다.
 
@@ -40,7 +64,7 @@
 python -m http.server 8000
 ```
 
-`http://localhost:8000`에서 **키 없이 예시 보기**를 눌러 흐름을 확인하세요. 실제 JEV 호출은 Netlify Functions가 필요합니다. [Netlify CLI](https://docs.netlify.com/cli/get-started/)가 설치된 환경에서 이 폴더를 열고 `netlify dev`를 실행하면 `/api/jev/analyze` 함수가 연결됩니다. Netlify에 저장소를 연결할 때 빌드 명령 없이 게시 디렉터리 `.`로 배포합니다. `netlify.toml`에 설정이 들어 있습니다.
+`http://localhost:8000`에서 **키 없이 예시 보기**를 눌러 흐름을 확인하세요. 실제 JEV 호출은 Netlify Functions가 필요합니다. [Netlify CLI](https://docs.netlify.com/cli/get-started/)가 설치된 환경에서 이 폴더를 열고 `netlify dev`를 실행하면 `/api/jev/analyze`와 `/api/gemini/consult` 함수가 연결됩니다. Netlify에 저장소를 연결할 때 빌드 명령 없이 게시 디렉터리 `.`로 배포합니다. `netlify.toml`에 설정이 들어 있습니다.
 
 API 키는 사용자가 브라우저에 입력하며, 브라우저 저장소와 서버 환경 변수에 기록하지 않습니다. 요청 때마다 서버 함수를 거쳐 TypeSafe API에 보내므로 본인이 신뢰하는 사이트에서만 입력하세요. 호출 비용과 한도는 본인의 TypeSafe 계정에 따릅니다. 실제 API 응답은 키 없이 테스트할 수 없으므로 배포 뒤 발급된 키로 검증해야 합니다.
 
@@ -49,7 +73,12 @@ API 키는 사용자가 브라우저에 입력하며, 브라우저 저장소와 
 | 파일 | 역할 |
 |---|---|
 | `data/market.json` | 전국 시군구 × 업종 대분류 집계 |
-| `app.js` | 선택, 통계·순위 계산, 예시 및 실제 결과 표시, 비교 보드 |
+| `app.js` | 선택, 통계·순위·심층 지표 표시, 예시 및 실제 결과 표시, 비교 보드 |
+| `consult.js` | Gemini 상담 화면, 안전한 마크다운 표시, 추가 질문 대화 |
+| `shared/market-profile.mjs` | 심층 지표 계산과 서버 측 형식 검사 |
+| `shared/jev-questions.mjs` | JEV 질문 정의 (서버·화면 공용) |
+| `shared/consult-prompt.mjs` | Gemini 상담 입력 생성 (서버·화면 공용) |
+| `netlify/functions/gemini-consult.mjs` | Gemini 호출과 오류 처리 |
 | `learn.js` | 답변 비교 체험, 질문 유형 슬라이더, 개념 퀴즈 |
 | `builder.js` | 질문 설계 화면 |
 | `shared/question-schema.mjs` | 직접 만든 질문의 형식 검사 (브라우저와 서버 함수가 함께 사용) |
@@ -66,4 +95,4 @@ JEV 요청은 [1번 저장소의 서버 함수](https://github.com/philosophyAIE
 
 ## 확인하기
 
-`for f in app.js learn.js builder.js shared/question-schema.mjs netlify/functions/jev-analyze.mjs; do node --check $f; done`로 문법을 검사하고, `python scripts/build-data.py …`로 데이터 합계를 검사할 수 있습니다. 비밀 키를 저장소에 커밋하지 마세요.
+`for f in *.js shared/*.mjs netlify/functions/*.mjs; do node --check $f; done`로 문법을 검사하고, `python scripts/build-data.py …`로 데이터 합계를 검사할 수 있습니다. 비밀 키를 저장소에 커밋하지 마세요.
