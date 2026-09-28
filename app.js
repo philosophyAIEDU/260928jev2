@@ -2,7 +2,8 @@ import './learn.js';
 import { getExtraQuestion, onExtraChange } from './builder.js';
 import { resetConsult } from './consult.js';
 import { buildProfile } from './shared/market-profile.mjs';
-import { buildQuestions, CHOICE_LABELS, SCORE_LEVELS, CORE_KEYS } from './shared/jev-questions.mjs';
+import { buildQuestions, buildPack, PACKS, CHOICE_LABELS, SCORE_LEVELS, CORE_KEYS, CRITERIA, SCAN_LEVELS, scanKey } from './shared/jev-questions.mjs';
+import { composite, scanRanking, crossCheck, expectedScores, scoreStats, DEFAULT_WEIGHTS } from './shared/analysis.mjs';
 
 const $ = (id) => document.getElementById(id);
 const labels = CHOICE_LABELS.market_pattern;
@@ -15,13 +16,12 @@ const description = {
   },
   visit_priority: '현장 조사 우선순위의 단계 점수입니다. 높은 점수도 투자 권고가 아닙니다.',
   needs_more_evidence: '추가 근거가 필요할 가능성에 대한 JEV의 응답입니다.',
-  competition_intensity: '입지계수·순위·점포 수로 본 경쟁 강도입니다. 매출이나 수요는 반영되지 않습니다.',
   hypothesis_fit: '내 메모의 가설이 공공데이터 수치와 들어맞는다는 “예” 응답값입니다.',
   differentiation_needed: '진입할 때 뚜렷한 차별화가 필요하다는 “예” 응답값입니다.'
 };
 const titles = {
   market_pattern: 'CHOICE · 상권 특성', visit_priority: 'SCORE · 조사 우선순위', needs_more_evidence: 'NOUL · 추가 근거 필요',
-  commercial_character: 'CHOICE · 상권 전체 성격', competition_intensity: 'SCORE · 경쟁 강도', entry_risk_focus: 'CHOICE · 먼저 검증할 위험',
+  commercial_character: 'CHOICE · 상권 전체 성격', entry_risk_focus: 'CHOICE · 먼저 검증할 위험',
   hypothesis_fit: 'NOUL · 메모 가설과 수치 부합', differentiation_needed: 'NOUL · 차별화 필요', first_visit: 'CHOICE · 먼저 방문할 후보'
 };
 // Words that show the note already carries field evidence; used for the note hints and the rule-based example.
@@ -42,6 +42,9 @@ const STORE = 'jev-market-board-v1';
 let market;
 let current;
 let lastResult;
+let lastAnswers = null;
+const packs = new Set(['core', 'criteria', 'scan']);
+const weights = { ...DEFAULT_WEIGHTS };  // mutated in place so the Gemini session always sees the current weights
 const number = (n) => n.toLocaleString('ko-KR');
 const percent = (n) => (n * 100).toFixed(1) + '%';
 const total = (counts) => Object.values(counts).reduce((a, b) => a + b, 0);
@@ -176,7 +179,7 @@ function updateNote() {
 
 function allQuestions() {
   const extra = getExtraQuestion();
-  const q = buildQuestions(current);
+  const q = buildQuestions(current, [...packs]);
   return extra && !(extra.key in q) ? { ...q, [extra.key]: extra.definition } : q;
 }
 
@@ -187,7 +190,7 @@ function updatePreview() {
   $('extraInfo').hidden = !extra;
   if (extra) $('extraInfo').textContent = `직접 만든 질문 “${extra.key}” (${extra.definition.type})도 함께 보냅니다.`;
   const keys = Object.keys(questions);
-  $('questionCount').replaceChildren(el('b', { textContent: `JEV에 한 번에 보낼 질문 ${keys.length}개` }),
+  $('questionCount').replaceChildren(el('b', { textContent: `JEV 요청 ${packs.size}회(동시) · 질문 ${keys.length}개` }),
     el('div', { className: 'q-chips' }, ...keys.map(k => el('span', { className: questions[k].type, textContent: `${k} · ${questions[k].type}` }))));
   $('preview').textContent = JSON.stringify({
     model: 'jev-latest',
@@ -254,21 +257,89 @@ function buildChecklist(answers, note) {
   return items;
 }
 
+const fmtScore = (v) => Number.isFinite(v) ? v.toFixed(2) : '—';
+
+function renderComposite() {
+  if (!lastAnswers) return;
+  const comp = composite(lastAnswers, weights);
+  $('compValue').textContent = comp ? `${Math.round(comp.value * 100)}` : '—';
+  $('compSd').textContent = comp ? `/ 100${comp.sd != null ? ` · 불확실성 ±${Math.round(comp.sd * 100)}` : ''}` : '가중치가 모두 0입니다';
+  const lo = comp ? Math.max(0, comp.value - (comp.sd ?? 0)) : 0, hi = comp ? Math.min(1, comp.value + (comp.sd ?? 0)) : 0;
+  $('compBar').style.width = comp ? `${comp.value * 100}%` : '0';
+  $('compRange').style.cssText = `left:${lo * 100}%;width:${(hi - lo) * 100}%`;
+}
+
+function renderCriteria(answers) {
+  const has = CRITERIA.some(c => answers[c.key]);
+  $('criteriaBox').hidden = !has;
+  if (!has) return;
+  const rows = CRITERIA.filter(c => c.direction).map(c => {
+    const st = scoreStats(answers[c.key]);
+    const levels = SCORE_LEVELS[c.key];
+    const w = el('select', { title: '가중치' }, ...[0, 1, 2, 3].map(v => el('option', { value: v, textContent: `가중치 ${v}` })));
+    w.value = String(weights[c.key]);
+    w.addEventListener('change', () => { weights[c.key] = Number(w.value); renderComposite(); });
+    const bar = el('div', { className: 'crit-bar' });
+    if (st) {
+      if (st.sd != null) bar.append(el('span', { style: `left:${Math.max(0, st.score - st.sd) / 4 * 100}%;width:${(Math.min(4, st.score + st.sd) - Math.max(0, st.score - st.sd)) / 4 * 100}%` }));
+      bar.append(el('i', { style: `width:${st.score / 4 * 100}%` }));
+    }
+    const unsure = st?.sd != null && st.sd >= .9;
+    return el('div', { className: 'crit-row' + (unsure ? ' unsure' : '') },
+      el('div', { className: 'crit-name' }, el('b', { textContent: c.name }), el('small', { textContent: c.direction < 0 ? '낮을수록 유리' : '높을수록 유리' })),
+      bar,
+      el('div', { className: 'crit-val' }, el('b', { textContent: st ? `${fmtScore(st.score)}` : '응답 없음' }), el('small', { textContent: st ? `${levels[Math.round(st.score)] ?? ''}${st.sd != null ? ` ±${st.sd.toFixed(2)}` : ''}${unsure ? ' · 불확실' : ''}` : '' })),
+      w);
+  });
+  $('criteriaRows').replaceChildren(...rows);
+  const conf = scoreStats(answers.data_confidence);
+  $('confBadge').replaceChildren(...(conf ? [el('b', { textContent: `데이터 신뢰도 ${fmtScore(conf.score)} / 4` }), el('span', { textContent: ` ${SCORE_LEVELS.data_confidence[Math.round(conf.score)]} — ${conf.score < 2 ? '점포 수가 적어 위 점수들이 쉽게 흔들릴 수 있습니다.' : '점포 수가 충분해 비율이 비교적 안정적입니다.'}` })] : []));
+  renderComposite();
+}
+
+function renderScan(answers) {
+  const rank = scanRanking(current, answers);
+  $('scanBox').hidden = !rank.length;
+  $('scanList').replaceChildren(...rank.map((r, i) => {
+    const btn = el('button', { type: 'button', textContent: r.name });
+    btn.addEventListener('click', () => { $('industry').value = r.code; showEvidence(); $('lab').scrollIntoView({ behavior: 'smooth' }); });
+    return el('li', { className: r.name === current.industry ? 'me' : '' },
+      el('span', { className: 'rk', textContent: String(i + 1) }), btn,
+      el('div', { className: 'crit-bar' }, ...(r.sd != null ? [el('span', { style: `left:${Math.max(0, r.score - r.sd) / 4 * 100}%;width:${(Math.min(4, r.score + r.sd) - Math.max(0, r.score - r.sd)) / 4 * 100}%` })] : []), el('i', { style: `width:${r.score / 4 * 100}%` })),
+      el('b', { textContent: fmtScore(r.score) }),
+      el('small', { textContent: `${SCAN_LEVELS[Math.round(r.score)]} · 비중 ${percent(r.share)} · 입지계수 ${r.locationQuotient}` }));
+  }));
+}
+
+function renderChecks(answers) {
+  const rows = crossCheck(current, answers);
+  $('checkBox').hidden = !rows.length;
+  const fmt = (v) => typeof v === 'number' ? v.toFixed(2) : labels[v] ?? v ?? '—';
+  const text = { agree: '✓ 일치', check: '! 다시 보기', info: '— 규칙 없음' };
+  $('checkRows').replaceChildren(...rows.map(r => el('tr', { className: r.status },
+    el('th', { textContent: r.name }), el('td', { textContent: fmt(r.jev) }), el('td', { textContent: r.expected == null ? '—' : fmt(r.expected) }),
+    el('td', { textContent: r.basis }), el('td', { className: 'st', textContent: text[r.status] }))));
+}
+
 function showResult(answers, isDemo, requestBody, extra) {
-  const questions = buildQuestions(current);
+  const questions = buildQuestions(current, ['core']);
+  lastAnswers = answers;
   $('resultCards').replaceChildren(...CORE_KEYS.map(k => answerCard(k, questions[k], answers[k])));
   const deep = Object.keys(questions).filter(k => !CORE_KEYS.includes(k)).map(k => answerCard(k, questions[k], answers[k]));
   if (extra) deep.push(answerCard(extra.key, extra.definition, answers[extra.key], true));
   $('deepCards').replaceChildren(...deep);
+  renderCriteria(answers);
+  renderScan(answers);
+  renderChecks(answers);
   $('checklist').replaceChildren(...buildChecklist(answers, $('note').value).map(t => el('li', {}, el('label', {}, el('input', { type: 'checkbox' }), ' ' + t))));
   $('modeBadge').textContent = isDemo ? '예시 결과' : 'JEV 실제 응답';
   $('modeBadge').className = isDemo ? 'badge demo' : 'badge';
-  $('modeLabel').textContent = isDemo ? '규칙으로 만든 화면 예시입니다. JEV 호출이나 실제 AI 판단이 아닙니다.' : `TypeSafe JEV 응답입니다. ${Object.keys(answers).length}개 질문의 답을 한 번의 요청으로 받았습니다.`;
+  $('modeLabel').textContent = isDemo ? '규칙으로 만든 화면 예시입니다. JEV 호출이나 실제 AI 판단이 아닙니다.' : `TypeSafe JEV 응답입니다. 요청 ${Array.isArray(requestBody) ? requestBody.length : 1}회로 ${Object.keys(answers).length}개 질문의 답을 받았습니다.`;
   $('raw').textContent = JSON.stringify({ requestBody, answers }, null, 2);
   $('saveResult').disabled = false;
   $('saveResult').firstChild.textContent = '비교 보드에 저장 ';
-  lastResult = { at: Date.now(), demo: isDemo, evidence: { ...current }, answers, extra };
-  resetConsult({ profile: current, answers, note: $('note').value.trim(), extra: extra ?? null, demo: isDemo });
+  lastResult = { at: Date.now(), demo: isDemo, evidence: { ...current }, answers, extra, weights };
+  resetConsult({ profile: current, answers, note: $('note').value.trim(), extra: extra ?? null, demo: isDemo, weights });
   $('results').hidden = false;
   $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -300,12 +371,23 @@ function demoAnswers(note, extra) {
   const sp = Object.fromEntries(e.specialized.map(s => [s.name, s.lq]));
   const has = (...names) => names.reduce((n, x) => n + (sp[x] ? sp[x] - 1 : 0), 0);
   answers.commercial_character = choiceAnswer({ residential_life: .15 + has('소매', '수리·개인', '보건의료'), office_business: .15 + has('과학·기술', '부동산', '시설관리·임대'), tourism_food: .15 + has('숙박', '음식', '예술·스포츠'), education_family: .15 + has('교육'), mixed_balanced: .15 + Math.max(0, e.mixDiversity - .75) * 3 + (e.specialized.length ? 0 : .5) });
-  const rankPos = 1 - (e.rankInProvince - 1) / Math.max(1, e.districtsInProvince - 1);
-  answers.competition_intensity = scoreAnswer(Math.min(4, Math.max(0, 2 + (ratio - 1) * 4 + (rankPos - .5) * 1.5)), 5);
   answers.entry_risk_focus = choiceAnswer({ oversupply: .1 + Math.max(0, ratio - 1) * 2, demand_unclear: .1 + Math.max(0, 1 - ratio) * 2, cost_unknown: found.includes('임대료') ? .05 : .35, customer_mismatch: found.includes('고객층') ? .2 : .1, info_gap: k <= 1 ? .5 : .05 });
   const saysCrowded = /많|밀집|경쟁/.test(note), saysSparse = /적|없|부족/.test(note);
   answers.hypothesis_fit = { type: 'noul', noul: clamp(saysCrowded && ratio > 1 || saysSparse && ratio < 1 ? .7 : saysCrowded || saysSparse ? .3 : .25, 0, 1) };
   answers.differentiation_needed = { type: 'noul', noul: clamp(.5 + (ratio - 1) * 1.5, .1, .95) };
+  // Criteria and scan: the visible baseline plus a fixed per-district offset, so some cross-checks disagree on purpose.
+  if (packs.has('criteria')) {
+    const exp = expectedScores(e);
+    const seed = [...e.region].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7);
+    CRITERIA.forEach((c, i) => {
+      const base = exp[c.key]?.value ?? (e.specialized.some(x => x.name === e.industry) || e.topIndustries.some(x => x.name === e.industry) ? 3 : 2);
+      const offset = ((seed * (i + 3)) % 29) / 10 - 1.4;
+      answers[c.key] = scoreAnswer(Math.min(4, Math.max(0, base + (c.key === 'data_confidence' ? 0 : offset))), 5);
+    });
+  }
+  if (packs.has('scan')) e.industryTable.forEach(r => {
+    answers[scanKey(r.code)] = scoreAnswer(Math.min(4, Math.max(0, 2 + (1 - r.locationQuotient) * 3 + (1 - r.nationalLocationQuotient))), 5);
+  });
   if (e.candidates.length) {
     const opts = [{ share: e.districtShare, lq: ratio }, ...e.candidates.map(c => ({ share: c.share, lq: c.locationQuotient }))];
     answers.first_visit = choiceAnswer(Object.fromEntries(opts.map((o, i) => [`c${i}`, .2 + Math.abs(o.lq - 1) + (i === 0 ? .1 : 0)])));
@@ -338,13 +420,26 @@ async function analyze() {
   if (!key) { $('status').textContent = '실제 분석에는 JEV API 키가 필요합니다. 키 없이 예시 보기도 가능합니다.'; $('apiKey').focus(); return; }
   const extra = getExtraQuestion();
   $('analyze').disabled = true;
-  $('status').textContent = `JEV에 질문 ${Object.keys(allQuestions()).length}개를 한 번에 보내고 있습니다…`;
+  const list = [...packs];
+  $('status').textContent = `JEV에 분석 묶음 ${list.length}개(질문 ${Object.keys(allQuestions()).length}개)를 동시에 보내고 있습니다…`;
   try {
-    const res = await fetch('/api/jev/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: key, evidence: current, note, extraQuestion: extra }) });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '분석에 실패했습니다.');
-    showResult(data.answers, false, data.requestBody, extra);
-    $('status').textContent = '실제 JEV 응답을 받았습니다. 아래에서 Gemini 종합 상담도 받아 보세요.';
+    // One request per pack, in parallel. A failed pack is reported without discarding the others.
+    const results = await Promise.all(list.map(async pack => {
+      try {
+        const res = await fetch('/api/jev/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey: key, evidence: current, note, pack, extraQuestion: pack === 'core' ? extra : undefined }) });
+        const data = await res.json().catch(() => ({}));
+        return res.ok ? { pack, data } : { pack, error: data.error || `HTTP ${res.status}` };
+      } catch { return { pack, error: '연결 실패' }; }
+    }));
+    const ok = results.filter(r => r.data);
+    if (!ok.length) throw new Error(results[0].error || '분석에 실패했습니다.');
+    const answers = Object.assign({}, ...ok.map(r => r.data.answers));
+    showResult(answers, false, ok.map(r => ({ pack: r.pack, ...r.data.requestBody })), extra);
+    const failed = results.filter(r => r.error);
+    $('status').textContent = failed.length
+      ? `일부 묶음이 실패했습니다: ${failed.map(r => `${PACKS[r.pack].name}(${r.error})`).join(', ')}. 받은 결과만 표시합니다.`
+      : '실제 JEV 응답을 받았습니다. 아래에서 Gemini가 결과를 확인하고 풀어 줍니다.';
   } catch (error) {
     $('status').textContent = error instanceof Error ? error.message : '잠시 후 다시 시도해 주세요.';
   } finally { $('analyze').disabled = false; }
@@ -372,12 +467,12 @@ function rowCells(r) {
   const s = r.answers.visit_priority ?? {};
   const n = Number(r.answers.needs_more_evidence?.noul);
   const cc = r.answers.commercial_character?.choice;
-  const ci = Number(r.answers.competition_intensity?.score);
+  const comp = composite(r.answers, r.weights ?? DEFAULT_WEIGHTS);
   return [
     `${r.evidence.region} · ${r.evidence.industry}`, percent(r.evidence.districtShare), percent(r.evidence.provinceShare),
     `${labels[c.choice] ?? c.choice ?? '—'} (${Number.isFinite(Number(c.confidence)) ? percent(Number(c.confidence)) : '—'})`,
     Number.isFinite(Number(s.score)) ? Number(s.score).toFixed(2) : '—', Number.isFinite(n) ? percent(n) : '—',
-    cc ? CHOICE_LABELS.commercial_character[cc] ?? cc : '—', Number.isFinite(ci) ? `${ci.toFixed(2)} / 4` : '—',
+    cc ? CHOICE_LABELS.commercial_character[cc] ?? cc : '—', comp ? `${Math.round(comp.value * 100)}${comp.sd != null ? ` ±${Math.round(comp.sd * 100)}` : ''}` : '—',
     extraSummary(r), r.demo ? '예시' : 'JEV'
   ];
 }
@@ -392,13 +487,22 @@ function renderBoard() {
   }));
 }
 function exportCsv() {
-  const head = ['번호', '지역 · 업종', '지역 비중', '시도 비중', '상권 특성', '조사 우선순위', '추가 근거 필요', '상권 성격', '경쟁 강도', '직접 만든 질문', '방식'];
+  const head = ['번호', '지역 · 업종', '지역 비중', '시도 비중', '상권 특성', '조사 우선순위', '추가 근거 필요', '상권 성격', '현장 조사 매력도', '직접 만든 질문', '방식'];
   const esc = (v) => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
   const lines = [head, ...memoryBoard.map((r, i) => [String(i + 1), ...rowCells(r)])].map(r => r.map(esc).join(','));
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const a = el('a', { href: URL.createObjectURL(blob), download: 'jev-비교보드.csv' });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function initPacks() {
+  $('packList').replaceChildren(...Object.entries(PACKS).map(([key, p]) => {
+    const box = el('input', { type: 'checkbox', checked: packs.has(key), disabled: key === 'core' });
+    box.addEventListener('change', () => { box.checked ? packs.add(key) : packs.delete(key); $('results').hidden = true; $('consult').hidden = true; updatePreview(); });
+    const n = Object.keys(buildPack(current, key)).length;
+    return el('label', { className: 'pack' }, box, el('span', {}, el('b', { textContent: `${p.name} ` }), el('small', { textContent: `${p.desc} · ${key === 'core' ? '7~8' : n}문항${key === 'core' ? ' · 항상 포함' : ''}` })));
+  }));
 }
 
 function initScenarios() {
@@ -418,6 +522,7 @@ try {
   $('sido').value = '11'; $('industry').value = 'I2';
   updateDistricts();
   initScenarios();
+  initPacks();
   updateNote();
   $('sido').addEventListener('change', updateDistricts);
   $('district').addEventListener('change', showEvidence);
@@ -435,7 +540,7 @@ try {
 
 $('saveResult').addEventListener('click', () => {
   if (!lastResult) return;
-  saveBoard([...memoryBoard, lastResult]);
+  saveBoard([...memoryBoard, { ...lastResult, weights: { ...weights } }]);
   renderBoard();
   $('saveResult').disabled = true;
   $('saveResult').firstChild.textContent = `저장됨 (${memoryBoard.length}번) `;

@@ -1,16 +1,16 @@
 // Shared by the browser question builder and the Netlify function,
 // so learners see exactly the same type checks the server applies.
-import { CORE_KEYS, DEEP_KEYS } from './jev-questions.mjs';
+import { CORE_KEYS, DEEP_KEYS, CRITERIA_KEYS } from './jev-questions.mjs';
 
 export const KEY_PATTERN = /^[a-z][a-z0-9_]{1,39}$/;
-export const RESERVED_KEYS = [...CORE_KEYS, ...DEEP_KEYS, 'first_visit'];
+export const RESERVED_KEYS = [...CORE_KEYS, ...DEEP_KEYS, ...CRITERIA_KEYS, 'first_visit'];
 const text = (v, min, max) => typeof v === 'string' && v.trim().length >= min && v.length <= max;
 
 // Returns a list of Korean error messages; an empty list means the question is valid.
 export function validateQuestion(key, q) {
   const errors = [];
   if (typeof key !== 'string' || !KEY_PATTERN.test(key)) errors.push('질문 키는 영어 소문자로 시작하고 소문자·숫자·밑줄만 2~40자로 써야 합니다.');
-  else if (RESERVED_KEYS.includes(key)) errors.push('기본 질문과 같은 키는 쓸 수 없습니다.');
+  else if (RESERVED_KEYS.includes(key) || key.startsWith('scan_')) errors.push('기본 질문과 같은 키는 쓸 수 없습니다.');
   if (!q || typeof q !== 'object') return [...errors, '질문 정의가 비어 있습니다.'];
   if (!['choice', 'score', 'noul'].includes(q.type)) errors.push('type은 choice, score, noul 중 하나여야 합니다.');
   if (!text(q.instructions, 10, 400)) errors.push('instructions(질문 지시문)는 10~400자로 적어 주세요.');
