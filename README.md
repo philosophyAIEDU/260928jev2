@@ -56,6 +56,11 @@ API 키는 사용자가 브라우저에 입력하며, 브라우저 저장소와 
 | `netlify/functions/jev-analyze.mjs` | 실제 JEV 요청과 질문 정의, 선택적 추가 질문 검사, 응답 오류 처리 |
 | `docs/CLASSROOM.md` | 강사용 진행안, 실습 활동, 정답 예시 |
 | `docs/scenarios.csv` | 창업 메모 연습 사례 |
+| `assets/market-hero.webp` | 공공데이터와 현장 확인을 연결하는 생성형 삽화 |
+| `assets/jev-three-decisions.webp` | Noul, Choice, Score를 그림으로 비유한 생성형 삽화 |
+| `illustrations.css` | 삽화의 반응형 화면 배치 |
+
+삽화는 개념 설명을 위해 생성했으며 실제 지역 사진이나 분석 결과가 아닙니다. 정확한 용어는 이미지 아래의 HTML 설명으로 표시합니다.
 
 JEV 요청은 [1번 저장소의 서버 함수](https://github.com/philosophyAIEDU/260921jev/blob/claude/eager-knuth-8afjke/netlify/functions/jev-analyze.ts)와 같은 `/v1/systemone` 엔드포인트, `jev-latest`, `state` + `questions` 구조를 사용합니다. 예시 모드는 단순 규칙과 **임의의 확률**을 사용하므로 JEV 응답으로 취급하면 안 됩니다.
 

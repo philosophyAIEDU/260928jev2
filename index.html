@@ -4,13 +4,13 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#102f29">
   <title>JEV 상권 탐색 실습실</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="illustrations.css">
 </head>
 <body>
   <header class="top"><div class="wrap top-inner"><div class="brand"><span class="mark">J</span><span>JEV <b>상권 탐색 실습실</b><small>필로소피 AI 교육</small></span></div>
     <nav class="nav" aria-label="주요 메뉴"><a href="#learn">JEV 이해하기</a><a href="#lab">실습실</a><a href="#compare">비교 보드</a><a href="#builder">질문 설계</a><a href="#quiz">퀴즈</a><a href="#guide">수업 안내</a></nav></div></header>
   <main class="wrap">
-    <section class="hero"><div><span class="eyebrow">PUBLIC DATA × STRUCTURED AI</span><h1>숫자로 살펴보고,<br><em>JEV로 질문해 보세요.</em></h1><p>전국 상가업소 데이터를 직접 비교하고, 내 창업 아이디어에 필요한 다음 조사를 정하는 입문자용 실습 앱입니다. 긴 글 대신 <b>정해진 형식의 답</b>을 받는 JEV의 방식을 직접 체험합니다.</p><div class="hero-tags"><a href="#learn">① JEV 이해하기</a><a href="#lab">② 상권 데이터 실습</a><a href="#compare">③ 여러 지역 비교</a><a href="#builder">④ 내 질문 설계</a><a href="#quiz">⑤ 개념 퀴즈</a></div></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="center-dot">?</div><span class="floating a">DATA</span><span class="floating b">JEV</span><span class="floating c">ACTION</span></div></section>
+    <section class="hero"><div><span class="eyebrow">PUBLIC DATA × STRUCTURED AI</span><h1>숫자로 살펴보고,<br><em>JEV로 질문해 보세요.</em></h1><p>전국 상가업소 데이터를 직접 비교하고, 내 창업 아이디어에 필요한 다음 조사를 정하는 입문자용 실습 앱입니다. 긴 글 대신 <b>정해진 형식의 답</b>을 받는 JEV의 방식을 직접 체험합니다.</p><div class="hero-tags"><a href="#learn">① JEV 이해하기</a><a href="#lab">② 상권 데이터 실습</a><a href="#compare">③ 여러 지역 비교</a><a href="#builder">④ 내 질문 설계</a><a href="#quiz">⑤ 개념 퀴즈</a></div></div><div class="hero-art"><img src="assets/market-hero.webp" alt="상점 지도를 살펴본 뒤 실제 거리에서 확인할 곳을 가리키는 교육자와 AI 도우미"></div></section>
 
     <!-- LEARN -->
     <section id="learn" class="learn">
@@ -43,6 +43,7 @@
       </div>
 
       <div class="card types"><div class="step">개념 <span>세 가지 질문 유형 만져 보기</span></div><h2>Choice · Score · Noul</h2><p class="muted">슬라이더를 움직여 확률이 바뀌면 해석이 어떻게 달라지는지 확인하세요. 숫자는 연습용입니다.</p>
+        <figure class="concept-figure"><img src="assets/jev-three-decisions.webp" loading="lazy" alt="왼쪽은 두 갈래 길, 가운데는 여러 카드 중 하나를 고르는 모습, 오른쪽은 순서가 있는 계단을 오르는 모습"><figcaption><span><b>Noul</b> · 예/아니요</span><span><b>Choice</b> · 여러 선택지 중 하나</span><span><b>Score</b> · 순서 있는 단계</span></figcaption></figure><p class="helper">그림은 개념 설명용 생성형 삽화입니다. 실제 JEV 응답이나 상권 통계는 아래에서 확인하세요.</p>
         <div class="type-tabs" role="tablist"><button role="tab" data-type="choice" aria-selected="true">Choice · 고르기</button><button role="tab" data-type="score" aria-selected="false">Score · 단계 점수</button><button role="tab" data-type="noul" aria-selected="false">Noul · 예/아니요</button></div>
         <div class="type-panel" id="typePanel"></div>
       </div>
