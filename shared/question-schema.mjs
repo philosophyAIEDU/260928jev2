@@ -1,7 +1,9 @@
 // Shared by the browser question builder and the Netlify function,
 // so learners see exactly the same type checks the server applies.
+import { CORE_KEYS, DEEP_KEYS } from './jev-questions.mjs';
+
 export const KEY_PATTERN = /^[a-z][a-z0-9_]{1,39}$/;
-export const RESERVED_KEYS = ['market_pattern', 'visit_priority', 'needs_more_evidence'];
+export const RESERVED_KEYS = [...CORE_KEYS, ...DEEP_KEYS, 'first_visit'];
 const text = (v, min, max) => typeof v === 'string' && v.trim().length >= min && v.length <= max;
 
 // Returns a list of Korean error messages; an empty list means the question is valid.
