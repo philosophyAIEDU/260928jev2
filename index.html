@@ -7,15 +7,106 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="top"><div class="wrap top-inner"><div class="brand"><span class="mark">J</span><span>JEV <b>상권 탐색 실습실</b><small>필로소피 AI 교육</small></span></div><a href="#guide">실습 안내 ↓</a></div></header>
+  <header class="top"><div class="wrap top-inner"><div class="brand"><span class="mark">J</span><span>JEV <b>상권 탐색 실습실</b><small>필로소피 AI 교육</small></span></div>
+    <nav class="nav" aria-label="주요 메뉴"><a href="#learn">JEV 이해하기</a><a href="#lab">실습실</a><a href="#compare">비교 보드</a><a href="#builder">질문 설계</a><a href="#quiz">퀴즈</a><a href="#guide">수업 안내</a></nav></div></header>
   <main class="wrap">
-    <section class="hero"><div><span class="eyebrow">PUBLIC DATA × STRUCTURED AI</span><h1>숫자로 살펴보고,<br><em>JEV로 질문해 보세요.</em></h1><p>전국 상가업소 데이터를 직접 비교하고, 내 창업 아이디어에 필요한 다음 조사를 정하는 입문자용 실습 앱입니다.</p><div class="hero-tags"><span>① 지역 선택</span><span>② 점포 비중 확인</span><span>③ JEV 판단 실습</span></div></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="center-dot">?</div><span class="floating a">DATA</span><span class="floating b">JEV</span><span class="floating c">ACTION</span></div></section>
-    <div class="notice"><span>데이터</span> 소상공인시장진흥공단 상가(상권)정보, <strong>2026년 6월</strong> 스냅샷 · 2번 저장소의 집계 자료에서 재가공 · 매출이나 성공 확률을 뜻하지 않습니다.</div>
-    <div class="layout"><section class="card controls"><div class="step">01 <span>조건 선택</span></div><h2>어느 지역, 어떤 업종인가요?</h2><p class="muted">시군구의 업종 점포 비중을 해당 시도 전체와 비교합니다.</p><div class="fields"><label>시도<select id="sido"></select></label><label>시군구<select id="district"></select></label><label>업종 대분류<select id="industry"></select></label></div><p class="helper">업종은 대분류 10종입니다. 더 세부적인 업종은 원본 저장소에서 확인할 수 있습니다.</p></section>
-      <section class="card evidence"><div class="step">02 <span>공공데이터 읽기</span></div><h2 id="evidenceTitle">점포 수를 불러오는 중</h2><div class="metrics"><div><span>선택 업종 점포</span><strong id="count">—</strong><small id="districtName">—</small></div><div><span>지역 내 업종 비중</span><strong id="share">—</strong><small>전체 점포 중</small></div><div><span>시도 업종 비중</span><strong id="provinceShare">—</strong><small>같은 업종 비교</small></div></div><div class="bars"><div><span>선택 시군구</span><div class="track"><i id="barDistrict"></i></div><b id="barDistrictValue">—</b></div><div><span>시도 전체</span><div class="track"><i id="barProvince"></i></div><b id="barProvinceValue">—</b></div></div><p class="insight" id="insight"></p><p class="helper">비중 = 선택 업종 점포 수 ÷ 해당 지역의 전체 점포 수. 이 수치에는 인구·면적·매출이 반영되지 않습니다.</p></section>
-      <section class="card decision"><div class="step">03 <span>JEV에 물어보기</span></div><h2>내 가설을 한 문장으로</h2><p class="muted">이 지역을 고른 이유와 직접 확인할 점을 적어 주세요. 가상 사례를 넣어도 됩니다.</p><label class="full">창업 메모<textarea id="note" maxlength="600" rows="4" placeholder="예: 역 앞에 학원들이 많은데 방과후 영어 수업 수요가 있을지 궁금합니다. 임대료와 하교 시간대 유동인구를 확인하고 싶어요."></textarea></label><div class="keybox"><label class="full">JEV API 키 <span>(실제 호출에만 필요)</span><input id="apiKey" type="password" autocomplete="off" placeholder="API 키를 입력하세요"></label><p>키는 브라우저 저장소에 보관하지 않고 요청 중에만 사용합니다. Netlify 함수가 TypeSafe API로 전달합니다.</p></div><div class="actions"><button id="analyze" class="primary">JEV로 분석하기 <span>↗</span></button><button id="demo" class="secondary">키 없이 예시 보기</button></div><p id="status" class="status" role="status" aria-live="polite"></p></section>
-      <section class="card results" id="results" hidden><div class="step">04 <span>결과 해석</span></div><div class="result-title"><div><h2>다음 현장 조사를 정해 보세요</h2><p id="modeLabel" class="muted"></p></div><span id="modeBadge" class="badge"></span></div><div id="resultCards" class="result-grid"></div><div class="takeaway"><strong>이 결과로 알 수 없는 것</strong><p>JEV의 점수와 확률은 창업 성공률이 아닙니다. 임대료, 실제 매출, 유동인구, 고객 수요와 경쟁점의 품질을 별도로 조사해 주세요.</p></div><details><summary>실제 질문과 응답 구조 보기</summary><p>API 키는 포함하지 않습니다. Noul은 예/아니요 확률, Choice는 선택지와 확률, Score는 단계별 점수와 확률입니다.</p><pre id="raw"></pre></details></section></div>
-    <section id="guide" class="guide"><div class="section-heading"><span class="eyebrow">CLASSROOM KIT</span><h2>45분 실습 흐름</h2></div><div class="guide-grid"><article><b>01 · 관찰</b><p>서로 다른 두 지역의 같은 업종을 고르고 비중을 비교합니다.</p></article><article><b>02 · 질문</b><p>숫자에 없는 정보 한 가지를 창업 메모에 적습니다.</p></article><article><b>03 · 분류</b><p>JEV의 Choice·Score·Noul 결과와 확률을 읽습니다.</p></article><article><b>04 · 검증</b><p>현장에 가서 확인할 질문 세 개를 직접 씁니다.</p></article></div><a class="source" href="https://github.com/philosophyAIEDU/260928jev2/blob/main/docs/CLASSROOM.md" target="_blank" rel="noopener noreferrer">강사용 실습 자료 열기 ↗</a></section>
+    <section class="hero"><div><span class="eyebrow">PUBLIC DATA × STRUCTURED AI</span><h1>숫자로 살펴보고,<br><em>JEV로 질문해 보세요.</em></h1><p>전국 상가업소 데이터를 직접 비교하고, 내 창업 아이디어에 필요한 다음 조사를 정하는 입문자용 실습 앱입니다. 긴 글 대신 <b>정해진 형식의 답</b>을 받는 JEV의 방식을 직접 체험합니다.</p><div class="hero-tags"><a href="#learn">① JEV 이해하기</a><a href="#lab">② 상권 데이터 실습</a><a href="#compare">③ 여러 지역 비교</a><a href="#builder">④ 내 질문 설계</a><a href="#quiz">⑤ 개념 퀴즈</a></div></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="center-dot">?</div><span class="floating a">DATA</span><span class="floating b">JEV</span><span class="floating c">ACTION</span></div></section>
+
+    <!-- LEARN -->
+    <section id="learn" class="learn">
+      <div class="section-heading"><span class="eyebrow dark">STEP 0 · WHY JEV</span><h2>같은 질문, 두 가지 답</h2><p class="lead">“이 지역에 음식점이 많은 편인가요?”라고 물었다고 생각해 보세요. 일반 대화형 AI는 문장으로 답하고, JEV는 우리가 미리 정한 <b>선택지와 확률</b>로 답합니다.</p></div>
+      <div class="versus">
+        <article class="card answer-chat"><small class="tag">일반 대화형 답변</small><p class="chat-bubble">이 지역은 음식점이 꽤 많은 편으로 보이며, 경쟁이 다소 치열할 수 있습니다. 다만 유동인구나 임대료 같은 요소에 따라 달라질 수 있으니 상황에 맞게 판단하시는 게 좋겠습니다. 전반적으로는 신중한 접근이 필요해 보입니다.</p><ul class="pain"><li>“꽤 많은 편”은 몇 %일까요?</li><li>다시 물으면 표현이 달라질 수 있어요.</li><li>표나 코드에 옮기려면 사람이 해석해야 해요.</li></ul></article>
+        <article class="card answer-jev"><small class="tag green">JEV 구조화 답변</small><pre class="mini-json">{
+  "market_pattern": {
+    "type": "choice",
+    "choice": "crowded",
+    "confidence": 0.71,
+    "probabilities": {
+      "crowded": 0.71, "mixed": 0.18,
+      "relatively_sparse": 0.04, "insufficient": 0.07
+    }
+  }
+}</pre><ul class="gain"><li>정해 둔 네 가지 선택지 중 하나만 돌아와요.</li><li>나머지 선택지의 확률까지 보여 줘요.</li><li>프로그램이 바로 읽고 표로 모을 수 있어요.</li></ul></article>
+      </div>
+      <p class="helper center">위 두 답변은 개념을 보여 주는 <b>설명용 예시</b>입니다. 실제 JEV 응답은 아래 실습실에서 API 키로 확인하세요.</p>
+
+      <div class="card sheet-demo"><div class="sheet-head"><div><div class="step">체험 <span>엑셀 칸에 옮겨 보기</span></div><h3>답변을 스프레드시트에 기록한다면?</h3><p class="muted">여러 지역을 비교하려면 답을 같은 칸에 모아야 합니다. 버튼을 눌러 결과를 비교해 보세요.</p></div><button id="sheetFill" class="primary">두 답변을 표로 옮기기</button></div>
+        <div class="table-scroll"><table class="sheet"><thead><tr><th>답변 방식</th><th>상권 특성</th><th>확신 정도</th><th>다른 가능성</th><th>옮기는 방법</th></tr></thead><tbody><tr><th>대화형</th><td data-fill="?? “꽤 많은 편”">—</td><td data-fill="?? “다소”">—</td><td data-fill="?? 문장 속에 흩어짐">—</td><td data-fill="사람이 읽고 해석">—</td></tr><tr><th>JEV</th><td data-fill="crowded">—</td><td data-fill="0.71">—</td><td data-fill="mixed 0.18 …">—</td><td data-fill="answers.market_pattern.choice">—</td></tr></tbody></table></div>
+      </div>
+
+      <div class="benefit-grid">
+        <article><span>01</span><h3>정해진 틀 (Type-safe)</h3><p>선택지·단계·예/아니요처럼 <b>답의 모양을 먼저 정합니다</b>. 엉뚱한 형식의 답을 걸러 내기 쉽습니다.</p></article>
+        <article><span>02</span><h3>확률로 보는 불확실성</h3><p>하나의 결론만이 아니라 <b>다른 선택지의 확률</b>도 받습니다. 0.51과 0.95는 같은 “예”가 아닙니다.</p></article>
+        <article><span>03</span><h3>한 번에 여러 질문</h3><p>상권 특성, 조사 우선순위, 추가 근거 필요 여부를 <b>한 요청</b>에 묶어 보냅니다.</p></article>
+        <article><span>04</span><h3>비교와 자동화</h3><p>모든 결과가 같은 구조라 <b>여러 지역을 한 표로</b> 모으고 CSV로 내보낼 수 있습니다.</p></article>
+      </div>
+
+      <div class="card types"><div class="step">개념 <span>세 가지 질문 유형 만져 보기</span></div><h2>Choice · Score · Noul</h2><p class="muted">슬라이더를 움직여 확률이 바뀌면 해석이 어떻게 달라지는지 확인하세요. 숫자는 연습용입니다.</p>
+        <div class="type-tabs" role="tablist"><button role="tab" data-type="choice" aria-selected="true">Choice · 고르기</button><button role="tab" data-type="score" aria-selected="false">Score · 단계 점수</button><button role="tab" data-type="noul" aria-selected="false">Noul · 예/아니요</button></div>
+        <div class="type-panel" id="typePanel"></div>
+      </div>
+
+      <div class="flow"><div><b>state</b><p>숫자·메모 등<br>판단 재료</p></div><i>+</i><div><b>questions</b><p>유형·지시문·기준<br>(내가 설계)</p></div><i>→</i><div class="flow-jev"><b>JEV</b><p>/v1/systemone</p></div><i>→</i><div><b>answers</b><p>질문 키별<br>구조화된 답</p></div></div>
+    </section>
+
+    <!-- LAB -->
+    <div class="notice" id="lab"><span>데이터</span> 소상공인시장진흥공단 상가(상권)정보, <strong>2026년 6월</strong> 스냅샷 · 2번 저장소의 집계 자료에서 재가공 · 매출이나 성공 확률을 뜻하지 않습니다.</div>
+    <div class="layout"><section class="card controls"><div class="step">01 <span>조건 선택</span></div><h2>어느 지역, 어떤 업종인가요?</h2><p class="muted">시군구의 업종 점포 비중을 해당 시도 전체와 비교합니다.</p><div class="fields"><label>시도<select id="sido"></select></label><label>시군구<select id="district"></select></label><label>업종 대분류<select id="industry"></select></label></div><p class="helper">업종은 대분류 10종입니다. 더 세부적인 업종은 원본 저장소에서 확인할 수 있습니다.</p>
+        <div class="mix"><div class="mix-head"><b>이 시군구의 업종 구성</b><span><i class="lg d"></i>시군구 <i class="lg p"></i>시도</span></div><div id="mix" class="mix-list"></div><p class="helper">업종 이름을 누르면 해당 업종으로 바뀝니다.</p></div></section>
+      <section class="card evidence"><div class="step">02 <span>공공데이터 읽기</span></div><h2 id="evidenceTitle">점포 수를 불러오는 중</h2><div class="metrics"><div><span>선택 업종 점포</span><strong id="count">—</strong><small id="districtName">—</small></div><div><span>지역 내 업종 비중</span><strong id="share">—</strong><small>전체 점포 중</small></div><div><span>시도 업종 비중</span><strong id="provinceShare">—</strong><small>같은 업종 비교</small></div></div><div class="bars"><div><span>선택 시군구</span><div class="track"><i id="barDistrict"></i></div><b id="barDistrictValue">—</b></div><div><span>시도 전체</span><div class="track"><i id="barProvince"></i></div><b id="barProvinceValue">—</b></div></div><p class="insight" id="insight"></p>
+        <div class="rank"><div class="mix-head"><b id="rankTitle">시도 안 비중 순위</b><span id="rankPos"></span></div><ol id="rankList" class="rank-list"></ol></div>
+        <p class="helper">비중 = 선택 업종 점포 수 ÷ 해당 지역의 전체 점포 수. 이 수치에는 인구·면적·매출이 반영되지 않습니다.</p></section>
+      <section class="card decision"><div class="step">03 <span>JEV에 물어보기</span></div><h2>내 가설을 한 문장으로</h2><p class="muted">이 지역을 고른 이유와 직접 확인할 점을 적어 주세요. 사례 버튼으로 연습 메모를 불러올 수 있습니다.</p>
+        <div class="scenario-row" id="scenarios" aria-label="연습 사례"></div>
+        <label class="full">창업 메모<textarea id="note" maxlength="600" rows="4" placeholder="예: 역 앞에 학원들이 많은데 방과후 영어 수업 수요가 있을지 궁금합니다. 임대료와 하교 시간대 유동인구를 확인하고 싶어요."></textarea></label>
+        <div class="note-meta"><span id="noteCount">0 / 600</span><div id="noteSignals" class="signals"></div></div>
+        <div id="extraInfo" class="extra-info" hidden></div>
+        <div class="keybox"><label class="full">JEV API 키 <span>(실제 호출에만 필요)</span><input id="apiKey" type="password" autocomplete="off" placeholder="API 키를 입력하세요"></label><p>키는 브라우저 저장소에 보관하지 않고 요청 중에만 사용합니다. Netlify 함수가 TypeSafe API로 전달합니다.</p></div><div class="actions"><button id="analyze" class="primary">JEV로 분석하기 <span>↗</span></button><button id="demo" class="secondary">키 없이 예시 보기</button></div><p id="status" class="status" role="status" aria-live="polite"></p>
+        <details class="preview"><summary>JEV에 보낼 요청 미리보기</summary><p>숫자(state)와 질문(questions)이 어떻게 묶이는지 보세요. API 키는 포함하지 않습니다.</p><pre id="preview"></pre></details></section>
+      <section class="card results" id="results" hidden><div class="step">04 <span>결과 해석</span></div><div class="result-title"><div><h2>다음 현장 조사를 정해 보세요</h2><p id="modeLabel" class="muted"></p></div><span id="modeBadge" class="badge"></span></div><div id="resultCards" class="result-grid"></div>
+        <div class="checklist"><strong>현장 조사 체크리스트</strong><p class="muted">결과와 메모를 바탕으로 자동으로 만든 초안입니다. 직접 고치고 더해 보세요.</p><ul id="checklist"></ul></div>
+        <div class="takeaway"><strong>이 결과로 알 수 없는 것</strong><p>JEV의 점수와 확률은 창업 성공률이 아닙니다. 임대료, 실제 매출, 유동인구, 고객 수요와 경쟁점의 품질을 별도로 조사해 주세요.</p></div>
+        <div class="actions"><button id="saveResult" class="primary">비교 보드에 저장 <span>＋</span></button><a class="secondary as-button" href="#compare">비교 보드 보기</a></div>
+        <details><summary>실제 질문과 응답 구조 보기</summary><p>API 키는 포함하지 않습니다. Noul은 예/아니요 확률, Choice는 선택지와 확률, Score는 단계별 점수와 확률입니다.</p><pre id="raw"></pre></details></section></div>
+
+    <!-- COMPARE -->
+    <section id="compare" class="compare">
+      <div class="section-heading"><span class="eyebrow dark">STEP 3 · COMPARE</span><h2>비교 보드</h2><p class="lead">분석 결과를 저장하면 같은 칸에 차곡차곡 쌓입니다. 답의 구조가 같기 때문에 가능한 일입니다. 이 브라우저에만 저장되며 API 키는 저장하지 않습니다.</p></div>
+      <div class="card"><div class="table-scroll"><table class="sheet board"><thead><tr><th>#</th><th>지역 · 업종</th><th>지역 비중</th><th>시도 비중</th><th>상권 특성 (Choice)</th><th>조사 우선순위 (Score)</th><th>추가 근거 필요 (Noul)</th><th>직접 만든 질문</th><th>방식</th><th></th></tr></thead><tbody id="boardBody"></tbody></table></div>
+        <p id="boardEmpty" class="empty">아직 저장한 결과가 없습니다. 실습실에서 <b>키 없이 예시 보기</b>를 누른 뒤 <b>비교 보드에 저장</b>을 눌러 보세요. 서로 다른 지역 2~3곳을 저장하면 차이가 잘 보입니다.</p>
+        <div class="actions"><button id="exportCsv" class="secondary">CSV로 내보내기</button><button id="clearBoard" class="secondary">모두 지우기</button></div></div>
+    </section>
+
+    <!-- BUILDER -->
+    <section id="builder" class="builder">
+      <div class="section-heading"><span class="eyebrow dark">STEP 4 · DESIGN</span><h2>내 질문 설계하기</h2><p class="lead">JEV의 핵심은 <b>질문을 설계하는 사람</b>입니다. 유형과 기준을 정하면 형식 검사를 통과한 질문만 보낼 수 있습니다. 완성한 질문은 실습실 분석에 함께 보낼 수 있습니다.</p></div>
+      <div class="builder-grid">
+        <div class="card"><div class="step">설계 <span>질문 정의</span></div>
+          <div class="preset-row"><span>예시 불러오기</span><button data-preset="choice">경쟁 형태 (choice)</button><button data-preset="score">접근성 단계 (score)</button><button data-preset="noul">임대료 조사 (noul)</button></div>
+          <div class="fields"><label>질문 키<input id="qKey" placeholder="예: competition_style" autocomplete="off"></label><label>유형<select id="qType"><option value="choice">choice · 여러 선택지 중 하나</option><option value="score">score · 순서 있는 단계</option><option value="noul">noul · 예/아니요</option></select></label></div>
+          <label class="full">지시문 (instructions)<textarea id="qInstructions" rows="3" maxlength="400" placeholder="JEV가 무엇을 판단해야 하는지 한두 문장으로 적어 주세요."></textarea></label>
+          <div class="criteria-head"><b id="criteriaLabel">선택지와 기준</b><button id="addCriterion" class="link-button">＋ 항목 추가</button></div>
+          <div id="criteria" class="criteria"></div>
+          <p class="helper" id="criteriaHelp"></p>
+        </div>
+        <div class="card"><div class="step">검사 <span>형식 확인</span></div>
+          <ul id="checks" class="checks"></ul>
+          <pre id="qJson" class="q-json"></pre>
+          <label class="toggle"><input type="checkbox" id="useExtra" disabled> 실습실 분석에 이 질문도 함께 보내기</label>
+          <p class="helper">체크하면 03단계의 예시·실제 분석에 이 질문이 추가됩니다. 예시 모드의 값은 의미 없는 자리표시 값입니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz" class="quiz">
+      <div class="section-heading"><span class="eyebrow dark">STEP 5 · CHECK</span><h2>개념 퀴즈</h2><p class="lead">숫자와 확률을 올바르게 읽었는지 확인해 보세요.</p></div>
+      <div id="quizList" class="quiz-list"></div>
+      <div class="quiz-score card"><strong id="quizScore">0 / 0</strong><p id="quizMessage" class="muted">문제를 풀면 점수가 표시됩니다.</p><button id="quizReset" class="secondary">다시 풀기</button></div>
+    </section>
+
+    <section id="guide" class="guide"><div class="section-heading"><span class="eyebrow dark">CLASSROOM KIT</span><h2>45분 실습 흐름</h2></div><div class="guide-grid"><article><b>01 · 관찰</b><p>서로 다른 두 지역의 같은 업종을 고르고 비중과 시도 안 순위를 비교합니다.</p></article><article><b>02 · 질문</b><p>숫자에 없는 정보 한 가지를 창업 메모에 적습니다. 메모에 담긴 근거 표시를 확인합니다.</p></article><article><b>03 · 분류</b><p>JEV의 Choice·Score·Noul 결과와 확률 분포를 읽고 비교 보드에 저장합니다.</p></article><article><b>04 · 검증</b><p>체크리스트를 고쳐 현장 질문 세 개를 쓰고, 나만의 질문을 설계해 봅니다.</p></article></div><a class="source" href="https://github.com/philosophyAIEDU/260928jev2/blob/main/docs/CLASSROOM.md" target="_blank" rel="noopener noreferrer">강사용 실습 자료 열기 ↗</a></section>
   </main><footer><div class="wrap">JEV 상권 탐색 실습실 <span>·</span> 공공데이터로 생각하고, 현장에서 확인합니다.</div></footer>
   <script type="module" src="app.js"></script>
 </body></html>

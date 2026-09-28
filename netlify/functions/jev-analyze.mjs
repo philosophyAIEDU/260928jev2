@@ -1,3 +1,5 @@
+import { validateQuestion } from '../../shared/question-schema.mjs';
+
 // JEV call is kept on the server so the browser never calls TypeSafe directly.
 // The learner's key is used for this request only; it is not persisted or logged.
 const questions = {
@@ -31,7 +33,7 @@ export default async function handler(request) {
   if (request.method !== 'POST') return json(405, { error: 'POST 요청만 가능합니다.' });
   let body;
   try { body = await request.json(); } catch { return json(400, { error: '요청 형식이 올바르지 않습니다.' }); }
-  const { apiKey, evidence, note } = body ?? {};
+  const { apiKey, evidence, note, extraQuestion } = body ?? {};
   if (typeof apiKey !== 'string' || !apiKey.trim() || apiKey.length > 512)
     return json(400, { error: 'JEV API 키를 확인해 주세요.' });
   if (typeof note !== 'string' || note.trim().length < 10 || note.length > 600)
@@ -42,8 +44,20 @@ export default async function handler(request) {
       evidence.districtTotal === 0 || evidence.provinceTotal === 0)
     return json(400, { error: '상권 통계를 다시 선택해 주세요.' });
 
-  const requestBody = { model: 'jev-latest', state: { ...evidence, entrepreneur_note: note.trim(),
-    data_caveat: '2026년 6월 업소 수 스냅샷. 임대료, 유동인구, 매출, 수익률 자료는 포함되지 않음.' }, questions };
+  // Optional learner-designed question from the question builder, checked with the same schema as the browser.
+  let allQuestions = questions;
+  if (extraQuestion != null) {
+    const { key, definition } = extraQuestion;
+    const errors = validateQuestion(key, definition);
+    if (errors.length) return json(400, { error: `직접 만든 질문을 확인해 주세요: ${errors[0]}` });
+    const { type, instructions, criteria } = definition;
+    allQuestions = { ...questions, [key]: { type, instructions: instructions.trim(), criteria } };
+  }
+
+  const state = Object.fromEntries(['region', 'industry', 'districtCount', 'districtTotal', 'provinceCount', 'provinceTotal', 'districtShare', 'provinceShare']
+    .map(k => [k, evidence[k]]));
+  const requestBody = { model: 'jev-latest', state: { ...state, entrepreneur_note: note.trim(),
+    data_caveat: '2026년 6월 업소 수 스냅샷. 임대료, 유동인구, 매출, 수익률 자료는 포함되지 않음.' }, questions: allQuestions };
   let response;
   try {
     response = await fetch('https://api.typesafe.ai/v1/systemone', {
